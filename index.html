@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>எனது முதல் Pi App</title>
+    <!-- Pi Network-ன் SDK-ஐ இணைத்தல் -->
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px; }
+        button { padding: 15px 30px; font-size: 18px; background-color: #F6B21B; border: none; border-radius: 5px; cursor: pointer; }
+        #status { margin-top: 20px; color: green; }
+    </style>
+</head>
+<body>
+
+    <h1>வணக்கம்! இது ஒரு சோதனை App</h1>
+    <p>கீழே உள்ள பட்டனை அழுத்தி 1 Test-Pi அனுப்பவும்.</p>
+
+    <button onclick="payPi()">1 Pi அனுப்பு (Test)</button>
+    
+    <div id="status"></div>
+
+    <script>
+        // 1. Pi Network-ஐ ஆரம்பிக்கிறோம் (Development Mode-ல்)
+        Pi.init({ version: "2.0", sandbox: true }); 
+        // குறிப்பு: sandbox: true என்பது இது 'Test-Pi' மட்டுமே எடுக்கும், உண்மையான Pi அல்ல.
+
+        // 2. பயனரை உள்ளே அனுமதித்தல் (Authentication)
+        async function login() {
+            try {
+                const scopes = ['payments']; // நமக்கு பேமெண்ட் அனுமதி தேவை
+                const authResult = await Pi.authenticate(scopes, onIncompletePaymentFound);
+                document.getElementById("status").innerText = "வெற்றிகரமாக உள்நுழைந்துவிட்டீர்கள்: " + authResult.user.username;
+            } catch (err) {
+                console.error(err);
+                document.getElementById("status").innerText = "உள்நுழைவு தோல்வி!";
+            }
+        }
+
+        // பாதியிலேயே நின்ற பேமெண்ட்களை கையாளுதல்
+        function onIncompletePaymentFound(payment) {
+            // சோதனைக்கு இது தேவையில்லை, ஆனால் விதிமுறைப்படி இருக்க வேண்டும்
+            return Pi.createPayment({ paymentId: payment.identifier }, callbacks);
+        }
+
+        // 3. பேமெண்ட் செய்யும் செயல்முறை
+        function payPi() {
+            const paymentData = {
+                amount: 1, // 1 Pi
+                memo: "எனது முதல் சோதனை பேமெண்ட்", // குறிப்பு
+                metadata: { type: "test_donation" } 
+            };
+
+            const callbacks = {
+                onReadyForServerApproval: function(paymentId) {
+                    // சர்வர் இல்லாததால், இதை நாம் Client-sideலேயே ஒப்புதல் அளிக்கிறோம் (சோதனைக்காக மட்டும்)
+                    console.log("Payment ID:", paymentId);
+                    // உண்மையான App-ல் இங்கே சர்வர் தேவைப்படும்.
+                },
+                onReadyForServerCompletion: function(paymentId, txid) {
+                    console.log("Transaction Done:", txid);
+                    document.getElementById("status").innerText = "பேமெண்ட் வெற்றி! நன்றி.";
+                },
+                onCancel: function(paymentId) {
+                    document.getElementById("status").innerText = "பேமெண்ட் ரத்து செய்யப்பட்டது.";
+                },
+                onError: function(error, payment) {
+                    document.getElementById("status").innerText = "பிழை ஏற்பட்டது: " + error;
+                }
+            };
+
+            // பேமெண்ட்டை உருவாக்குதல்
+            Pi.createPayment(paymentData, callbacks);
+        }
+
+        // ஆப் திறந்தவுடன் லாகின் செய்யச் சொல்வது
+        login();
+
+    </script>
+
+</body>
+</html>
